@@ -7,3 +7,4 @@ Basically a system that sits in an enterprise like a sniffer and detects and che
 4. Using attack to create malicious events and also using mitre to describe what actually happened.
 5. A graph showing future prediction or moment of the attacker or something
 6. Prevention strategies
+7. Showing various kinds of attacks

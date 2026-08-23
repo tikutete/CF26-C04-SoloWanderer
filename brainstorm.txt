@@ -1,0 +1,1 @@
+Basically a system that sits in an enterprise like a sniffer and detects and checks every move, whether wired or wireless, and flags the authorities when something bad happens. It also tells what is the actual path or something. This attack framework is actually the credible resource that I'm going to use.

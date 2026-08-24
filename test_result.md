@@ -146,6 +146,37 @@ frontend:
         - working: true
           agent: "main"
           comment: "buildLayout floor-2 transform: only the switch is a hub; Wi-Fi AP + Badge Reader are now endpoints under the switch. Visually confirmed via screenshot - badge is inline in the switch row, no stray mini-group."
+  - task: "Auto-Defense ON defensive demo (SABRE panel + reconstruction)"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/hooks/useDefenseEngine.js, frontend/src/components/SabreDefensePanel.js, frontend/src/components/NetworkView.js, frontend/src/components/TerminalWindow.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            With Auto-Defense ON (default), the Network View shows a right-side translucent-red SABRE DEFENSE
+            panel (verified rendering: Safety Score idle rand 92-98 every 2s, streaming telemetry).
+            TEST FLOW (Auto-Defense ON): Explore Floor 1 -> click Lobby Kiosk -> Open Terminal Screen.
+            Keep Network View open (terminal stays on top). Run in terminal:
+              1) ssh 10.0.1.10 ; login C4entrp / root  -> panel: telemetry preempt yellow "UNAUTHORIZED AUTH" 5s;
+                 Safety Score -> 82, area amber 2s, back to idle.
+              2) ip neigh  -> no reaction.
+              3) ssh 10.0.1.12 ; login recep2 / lobby2  -> alert "Reception PC 2 is accessed by Kiosk"; score dips to 72.
+              4) nmap  -> alert "Suspicious activity detected - recep2 never initiated a network scan".
+              5) smb://10.0.3.20/memo  -> TERMINAL halts, spams "NT_STATUS_ACCESS_DENIED" 3x (1s apart) then
+                 "Connection terminated by SABRE Auto-Defense". Panel: "POTENTIAL LATERAL ENTRY detected",
+                 after 2s Safety Score -> 24 CRITICAL red + alert "SPREAD STOPPED".
+                 Then staged reconstruction in topology: "Reconstructing potential attack path..." ->
+                 dotted rings over File Storage Unit 1 & 2 (F3) -> dotted line to Dev Server 2 (F4) ->
+                 dotted line to Backup Server (F5). Panel then shows analysis: Attack type "Internal Spearphishing"
+                 (highlighted), MITRE T1534, reason bullets, and "Show more details" -> 7-step MITRE breakdown
+                 with attack types highlighted.
+              6) In ON mode, "login exec_2" and "ssh back_serv_01" must be BLOCKED with an Auto-Defense message.
+            Reset attack path button clears everything. Toggling Auto-Defense OFF should hide the panel and
+            instead reveal the OFF-mode red compromised-device glow path.
 
 metadata:
   created_by: "main_agent"
@@ -155,6 +186,7 @@ metadata:
 
 test_plan:
   current_focus:
+    - "Auto-Defense ON defensive demo (SABRE panel + reconstruction)"
     - "Attack-path red glow in Network View driven by Terminal chain"
   stuck_tasks: []
   test_all: false

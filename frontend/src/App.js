@@ -20,12 +20,13 @@ export default function App() {
   const [terminalDevice, setTerminalDevice] = useState(null);
   const [autoDefense, setAutoDefense] = useState(true); // Auto-Defense ON by default
   const [compromisedIps, setCompromisedIps] = useState([]); // attack path, in order
+  const [attackLog, setAttackLog] = useState([]); // ordered attack events for the defense engine
 
-  const handleCompromise = useCallback((ip) => {
-    if (!ip) return;
-    setCompromisedIps((prev) => (prev.includes(ip) ? prev : [...prev, ip]));
+  const handleAttack = useCallback(({ step, ip }) => {
+    setAttackLog((prev) => [...prev, { step, ip, t: Date.now() }]);
+    if (ip) setCompromisedIps((prev) => (prev.includes(ip) ? prev : [...prev, ip]));
   }, []);
-  const handleResetPath = useCallback(() => setCompromisedIps([]), []);
+  const handleResetPath = useCallback(() => { setCompromisedIps([]); setAttackLog([]); }, []);
 
   const irisRef = useRef(null);
   const clickPosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -122,6 +123,7 @@ export default function App() {
           compromisedIps={compromisedIps}
           autoDefense={autoDefense}
           onResetPath={handleResetPath}
+          attackLog={attackLog}
         />
       )}
 
@@ -130,7 +132,8 @@ export default function App() {
         <TerminalWindow
           device={terminalDevice}
           onClose={() => setTerminalDevice(null)}
-          onCompromise={handleCompromise}
+          onAttack={handleAttack}
+          autoDefense={autoDefense}
         />
       )}
     </div>

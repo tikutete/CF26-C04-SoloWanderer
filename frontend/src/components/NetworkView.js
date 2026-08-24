@@ -4,6 +4,8 @@ import {
   HardDrive, Cloud, Server, Boxes, ShieldAlert,
 } from 'lucide-react';
 import { getFloorDevices } from '../data/floorDevices';
+import useDefenseEngine from '../hooks/useDefenseEngine';
+import SabreDefensePanel from './SabreDefensePanel';
 
 const COLOR = {
   computer: '#56d6e8', kiosk: '#8be7f2', badge: '#ffb454', camera: '#ff7a5c',
@@ -107,10 +109,25 @@ function Chip({ x, y, type, title, testid, big, compromised }) {
   );
 }
 
-export default function NetworkView({ onClose, compromisedIps = [], autoDefense = true, onResetPath }) {
+export default function NetworkView({ onClose, compromisedIps = [], autoDefense = true, onResetPath, attackLog = [] }) {
   const { nodes, edges, labels, core, hubYByFloor, width, height } = useMemo(buildLayout, []);
 
-  const show = !autoDefense; // attack path only revealed when Auto-Defense is OFF
+  const engine = useDefenseEngine(attackLog, autoDefense);
+  const { reconStage } = engine;
+
+  // Node lookup by IP (for the reconstructed-path overlay).
+  const nodeByIp = useMemo(() => {
+    const m = {};
+    nodes.forEach((n) => { m[n.ip] = n; });
+    if (core) m['10.0.5.1'] = core;
+    return m;
+  }, [nodes, core]);
+  const fs1 = nodeByIp['10.0.3.19'];   // File Storage Unit 1 (F3)
+  const fs2 = nodeByIp['10.0.3.20'];   // File Storage Unit 2 (F3) - the memo share
+  const dev = nodeByIp['10.0.4.18'];   // Dev Server 2 (F4)
+  const backup = nodeByIp['10.0.5.16']; // Backup Server (F5)
+
+  const show = !autoDefense; // OFF: reveal the actual compromised path in red
   const comp = useMemo(() => new Set(show ? compromisedIps : []), [show, compromisedIps]);
   const hasPath = comp.size > 0;
 
@@ -137,7 +154,7 @@ export default function NetworkView({ onClose, compromisedIps = [], autoDefense 
           {/* Attack-path status */}
           {autoDefense ? (
             <span className="flex items-center gap-1.5 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1.5 font-mono text-[11px] font-semibold text-emerald-300" data-testid="net-defense-status">
-              <ShieldAlert className="h-3.5 w-3.5" /> Auto-Defense ON · path hidden
+              <ShieldAlert className="h-3.5 w-3.5" /> Auto-Defense ON · SABRE monitoring
             </span>
           ) : hasPath ? (
             <span className="flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 font-mono text-[11px] font-semibold text-red-300 sabre-compromised" data-testid="net-attack-status">
@@ -199,6 +216,29 @@ export default function NetworkView({ onClose, compromisedIps = [], autoDefense 
                 data-testid="net-attack-spine"
               />
             )}
+
+            {/* Auto-Defense ON: reconstructed potential attack path (staged, dotted) */}
+            {autoDefense && reconStage >= 2 && fs1 && (
+              <circle cx={fs1.x} cy={fs1.y} r={27} fill="none" stroke="#ff6b6b" strokeWidth={1.8} className="sabre-dash sabre-ring" data-testid="recon-ring-fs1" />
+            )}
+            {autoDefense && reconStage >= 2 && fs2 && (
+              <circle cx={fs2.x} cy={fs2.y} r={27} fill="none" stroke="#ff6b6b" strokeWidth={1.8} className="sabre-dash sabre-ring" data-testid="recon-ring-fs2" />
+            )}
+            {autoDefense && reconStage >= 3 && fs1 && dev && (
+              <line x1={fs1.x} y1={fs1.y} x2={dev.x} y2={dev.y} stroke="#ff5a5a" strokeWidth={1.6} strokeOpacity={0.75} className="sabre-dash" />
+            )}
+            {autoDefense && reconStage >= 3 && fs2 && dev && (
+              <line x1={fs2.x} y1={fs2.y} x2={dev.x} y2={dev.y} stroke="#ff3b3b" strokeWidth={2} className="sabre-dash" style={{ filter: 'drop-shadow(0 0 4px rgba(255,59,59,0.9))' }} data-testid="recon-line-dev" />
+            )}
+            {autoDefense && reconStage >= 3 && dev && (
+              <circle cx={dev.x} cy={dev.y} r={27} fill="none" stroke="#ff6b6b" strokeWidth={1.8} className="sabre-dash sabre-ring" />
+            )}
+            {autoDefense && reconStage >= 4 && dev && backup && (
+              <line x1={dev.x} y1={dev.y} x2={backup.x} y2={backup.y} stroke="#ff3b3b" strokeWidth={2} className="sabre-dash" style={{ filter: 'drop-shadow(0 0 4px rgba(255,59,59,0.9))' }} data-testid="recon-line-backup" />
+            )}
+            {autoDefense && reconStage >= 4 && backup && (
+              <circle cx={backup.x} cy={backup.y} r={27} fill="none" stroke="#ff3b3b" strokeWidth={2} className="sabre-dash sabre-ring" data-testid="recon-ring-backup" />
+            )}
           </svg>
 
           {core && <Chip x={core.x} y={core.y} type="coreswitch" title="Core Switch (Floor 5)" testid="net-node-core" big compromised={comp.has('10.0.5.1')} />}
@@ -207,6 +247,9 @@ export default function NetworkView({ onClose, compromisedIps = [], autoDefense 
           ))}
         </div>
       </div>
+
+      {/* Auto-Defense ON: live SABRE defense panel on the right */}
+      {autoDefense && <SabreDefensePanel {...engine} />}
     </div>
   );
 }

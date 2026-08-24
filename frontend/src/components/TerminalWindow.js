@@ -87,7 +87,7 @@ function ipNeigh(floor, selfIp) {
   return lines;
 }
 
-export default function TerminalWindow({ device, onClose, onCompromise }) {
+export default function TerminalWindow({ device, onClose, onAttack, autoDefense }) {
   const [lines, setLines] = useState([
     `# SABRE console — target: ${device?.name || 'unknown'} (${device?.ip || 'n/a'})`,
     "# type 'help' for commands. Start with: ssh " + (device?.ip || ''),
@@ -140,7 +140,8 @@ export default function TerminalWindow({ device, onClose, onCompromise }) {
       if (okUser && raw.trim() === host.pass) {
         out.push(...banner(host.promptIp));
         setSessions((s) => [...s, { u: host.promptUser, ip: host.promptIp, floor: floorOf(host.promptIp) }]);
-        onCompromise?.(host.promptIp);
+        const step = host.promptIp === '10.0.1.10' ? 'ssh_kiosk' : host.promptIp === '10.0.1.12' ? 'ssh_recep' : 'ssh_generic';
+        onAttack?.({ step, ip: host.promptIp });
       } else {
         out.push('Permission denied, please try again.');
       }
@@ -169,23 +170,39 @@ export default function TerminalWindow({ device, onClose, onCompromise }) {
     else if (cmd === 'ssh') {
       const target = parts[1];
       if (!target) out.push('usage: ssh [user@]hostname');
-      else if (target === 'back_serv_01') { setSessions((s) => [...s, { u: 'Arnav', ip: '10.0.5.19', floor: 5 }]); onCompromise?.(BACKUP_IP); }
+      else if (target === 'back_serv_01') {
+        if (autoDefense) out.push('ssh: connection to back_serv_01 blocked by SABRE Auto-Defense');
+        else { setSessions((s) => [...s, { u: 'Arnav', ip: '10.0.5.19', floor: 5 }]); onAttack?.({ step: 'ssh_backup', ip: BACKUP_IP }); }
+      }
       else {
         const host = HOSTS[target] || (byIp[target] ? { user: 'admin', pass: 'admin', promptUser: 'admin', promptIp: target } : null);
         if (!host) out.push(`ssh: connect to host ${target} port 22: No route to host`);
         else { setPending({ host }); setMode('login'); }
       }
     } else if (cmd === 'login') {
-      if (parts[1] === 'exec_2') { setSessions((s) => [...s, { u: 'Arnav', ip: '10.0.4.18', floor: 4 }]); onCompromise?.('10.0.4.18'); }
-      else out.push(`login: unknown service '${parts[1] || ''}'`);
+      if (parts[1] === 'exec_2' || parts[1] === 'exec_dsvr_2') {
+        if (autoDefense) out.push('login: access denied - blocked by SABRE Auto-Defense');
+        else { setSessions((s) => [...s, { u: 'Arnav', ip: '10.0.4.18', floor: 4 }]); onAttack?.({ step: 'login_exec', ip: '10.0.4.18' }); }
+      } else out.push(`login: unknown service '${parts[1] || ''}'`);
     } else if (cmd === 'ip' && parts[1] === 'neigh') {
       out.push(...ipNeigh(cur.floor, cur.ip));
+      onAttack?.({ step: 'ip_neigh' });
     } else if (cmd === 'nmap') {
       out.push(...NMAP_OUTPUT);
+      onAttack?.({ step: 'nmap' });
     } else if (trimmed.startsWith('smb://')) {
-      out.push(...MEMO);
       const m = trimmed.match(/smb:\/\/([0-9.]+)/);
-      if (m) onCompromise?.(m[1]);
+      if (autoDefense) {
+        out.push('Connecting to share...');
+        onAttack?.({ step: 'smb', ip: m ? m[1] : null });
+        [1000, 2000, 3000].forEach((ms) => {
+          setTimeout(() => setLines((l) => [...l, 'smb: NT_STATUS_ACCESS_DENIED - access denied']), ms);
+        });
+        setTimeout(() => setLines((l) => [...l, 'Connection terminated by SABRE Auto-Defense. Spread stopped.']), 3600);
+      } else {
+        out.push(...MEMO);
+        if (m) onAttack?.({ step: 'smb', ip: m[1] });
+      }
     } else if (cmd === 'sudo' && parts[1] === 'apt' && parts[2] === 'purge') {
       out.push('Reading package lists... Done', 'Building dependency tree... Done', 'Are you sure want to clear all backup? [Y/N]');
       setMode('confirm');
@@ -216,7 +233,7 @@ export default function TerminalWindow({ device, onClose, onCompromise }) {
   };
 
   const lineColor = (t) => {
-    if (/denied|not found|No route|Abort|FAILED/i.test(t)) return '#ff6b6b';
+    if (/denied|not found|No route|Abort|FAILED|blocked|terminated|Spread stopped/i.test(t)) return '#ff6b6b';
     if (/successfully|REACHABLE|Welcome to Ubuntu/i.test(t)) return '#7CFC00';
     if (t.startsWith('#')) return '#5b7183';
     return '#c7d3da';

@@ -54,3 +54,21 @@ code {
 .sabre-compromised {
   animation: sabreFlicker 0.55s ease-in-out infinite;
 }
+
+@keyframes sabreDash {
+  to { stroke-dashoffset: -18; }
+}
+
+.sabre-dash {
+  stroke-dasharray: 4 5;
+  animation: sabreDash 0.6s linear infinite;
+}
+
+@keyframes sabreRingPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+.sabre-ring {
+  animation: sabreDash 0.9s linear infinite, sabreRingPulse 1.2s ease-in-out infinite;
+}

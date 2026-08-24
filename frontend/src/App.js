@@ -1,0 +1,101 @@
+import React, { useState, useRef, useCallback } from 'react';
+import { Target, ArrowLeft } from 'lucide-react';
+import BuildingCanvas3D from './components/BuildingCanvas3D';
+import FloorInspectorPanel from './components/FloorInspectorPanel';
+import ControlsToolbar from './components/ControlsToolbar';
+import ArchitecturalSpecsModal from './components/ArchitecturalSpecsModal';
+import IrisTransition from './components/IrisTransition';
+
+export default function App() {
+  const [selectedFloor, setSelectedFloor] = useState(1);
+  const [timeOfDay, setTimeOfDay] = useState('sunset'); // sunset, night, day
+  const [wireframeMode, setWireframeMode] = useState(false);
+  const [isSpecsOpen, setIsSpecsOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('overview'); // overview | floor
+
+  const irisRef = useRef(null);
+  const clickPosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+
+  // Fired when a floor is clicked in the 3D scene — records the approximate screen origin for the iris.
+  const handleSelectFloor = useCallback((floor, pos) => {
+    setSelectedFloor(floor);
+    if (pos) clickPosRef.current = pos;
+  }, []);
+
+  const enterFloor = () => {
+    const { x, y } = clickPosRef.current;
+    irisRef.current?.play({ x, y, onCovered: () => setViewMode('floor') });
+  };
+
+  const exitFloor = () => {
+    irisRef.current?.play({ onCovered: () => setViewMode('overview') });
+  };
+
+  return (
+    <div className="w-screen h-screen overflow-hidden flex flex-col bg-slate-950 font-sans text-slate-100 select-none" data-testid="building-generator-app">
+      {/* Top Toolbar */}
+      <ControlsToolbar
+        timeOfDay={timeOfDay}
+        setTimeOfDay={setTimeOfDay}
+        wireframeMode={wireframeMode}
+        setWireframeMode={setWireframeMode}
+        onOpenSpecs={() => setIsSpecsOpen(true)}
+      />
+
+      {/* Main Content: 3D Viewport + Side Inspector Panel */}
+      <div className="relative flex-1 w-full h-full flex flex-col lg:flex-row overflow-hidden">
+        {/* 3D Canvas Viewport */}
+        <div className="flex-1 h-full relative">
+          <BuildingCanvas3D
+            selectedFloor={selectedFloor}
+            onSelectFloor={handleSelectFloor}
+            timeOfDay={timeOfDay}
+            wireframeMode={wireframeMode}
+            viewMode={viewMode}
+          />
+
+          {/* Explore prompt (overview) */}
+          {viewMode === 'overview' && (
+            <button
+              onClick={enterFloor}
+              data-testid="explore-floor-btn"
+              className="absolute bottom-8 left-1/2 -translate-x-1/2 group flex items-center gap-2.5 rounded-full border border-cyan-300/40 bg-[#04121a]/90 px-6 py-3.5 font-mono text-sm font-semibold uppercase tracking-widest text-cyan-100 shadow-[0_0_30px_-6px_rgba(0,229,255,0.6)] backdrop-blur-xl transition-all duration-300 hover:border-cyan-300/80 hover:bg-[#062230]/95 hover:shadow-[0_0_44px_-4px_rgba(0,229,255,0.85)] active:scale-95"
+            >
+              <Target className="h-4 w-4 text-cyan-300 transition-transform duration-500 group-hover:rotate-90" />
+              <span>Explore Floor {selectedFloor}</span>
+            </button>
+          )}
+
+          {/* Return control (floor view) */}
+          {viewMode === 'floor' && (
+            <button
+              onClick={exitFloor}
+              data-testid="back-to-building-btn"
+              className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full border border-cyan-300/50 bg-[#04121a]/90 px-6 py-3.5 font-mono text-sm font-semibold uppercase tracking-widest text-cyan-100 shadow-[0_0_30px_-6px_rgba(0,229,255,0.6)] backdrop-blur-xl transition-all duration-300 hover:border-cyan-300/90 hover:bg-[#062230]/95 hover:shadow-[0_0_44px_-4px_rgba(0,229,255,0.85)] active:scale-95"
+            >
+              <ArrowLeft className="h-4 w-4 text-cyan-300" />
+              <span>Return to Building View</span>
+            </button>
+          )}
+        </div>
+
+        {/* Floor Inspector & Details Sidebar */}
+        <FloorInspectorPanel
+          selectedFloor={selectedFloor}
+          onSelectFloor={handleSelectFloor}
+          onOpenSpecs={() => setIsSpecsOpen(true)}
+        />
+      </div>
+
+      {/* Architectural Specs Modal */}
+      <ArchitecturalSpecsModal
+        isOpen={isSpecsOpen}
+        onClose={() => setIsSpecsOpen(false)}
+        selectedFloor={selectedFloor}
+      />
+
+      {/* Cinematic iris transition overlay (reusable) */}
+      <IrisTransition ref={irisRef} />
+    </div>
+  );
+}

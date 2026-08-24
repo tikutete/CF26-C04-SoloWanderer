@@ -1,0 +1,35 @@
+{
+  "app_name": "NeoGothic Procedural Skyscraper 3D Experience",
+  "app_type": "3d_experience",
+  "theme": "dark",
+  "archetype": "LUXURY",
+  "typography": {
+    "heading": "Cormorant Garamond, serif",
+    "body": "Outfit, sans-serif"
+  },
+  "colors": {
+    "primary": "#d97706",
+    "accent": "#f59e0b",
+    "background": "#090d16",
+    "surface": "#131b2e",
+    "text": "#f3f4f6"
+  },
+  "key_functionalities": [
+    "Five-floor procedural 3D Neo-Gothic skyscraper rendered with Three.js",
+    "Click-to-highlight individual floors with glowing terracotta & gold aura",
+    "Floor detail inspection panel showing architectural specs, materials, and tenant metrics",
+    "Sunset lighting and atmosphere simulation with orbit controls",
+    "Preset camera viewpoints (Aerial, Street level, Isometric, Floor focus)"
+  ],
+  "components": [
+    "BuildingCanvas3D.js",
+    "FloorInspectorPanel.js",
+    "ControlsToolbar.js",
+    "ArchitecturalSpecsModal.js"
+  ],
+  "accessibility": {
+    "keyboard_navigation": "Supported for all control buttons and floor tabs",
+    "aria_labels": "Included on all interactive 3D triggers and UI buttons",
+    "contrast_ratio": "Meets WCAG AA standards"
+  }
+}

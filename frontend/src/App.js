@@ -18,6 +18,14 @@ export default function App() {
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [activeTab, setActiveTab] = useState('scene'); // scene | network
   const [terminalDevice, setTerminalDevice] = useState(null);
+  const [autoDefense, setAutoDefense] = useState(true); // Auto-Defense ON by default
+  const [compromisedIps, setCompromisedIps] = useState([]); // attack path, in order
+
+  const handleCompromise = useCallback((ip) => {
+    if (!ip) return;
+    setCompromisedIps((prev) => (prev.includes(ip) ? prev : [...prev, ip]));
+  }, []);
+  const handleResetPath = useCallback(() => setCompromisedIps([]), []);
 
   const irisRef = useRef(null);
   const clickPosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -43,7 +51,7 @@ export default function App() {
   return (
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-slate-950 font-sans text-slate-100 select-none" data-testid="building-generator-app">
       {/* Top Toolbar */}
-      <ControlsToolbar />
+      <ControlsToolbar autoDefense={autoDefense} onToggleDefense={() => setAutoDefense((v) => !v)} />
 
       {/* Main Content: 3D Viewport + Side Inspector Panel */}
       <div className="relative flex-1 w-full h-full flex flex-col lg:flex-row overflow-hidden">
@@ -108,10 +116,23 @@ export default function App() {
 
       {/* Left hover-reveal tabs + Network View overlay */}
       <LeftTabsRail active={activeTab} onSelect={setActiveTab} />
-      {activeTab === 'network' && <NetworkView onClose={() => setActiveTab('scene')} />}
+      {activeTab === 'network' && (
+        <NetworkView
+          onClose={() => setActiveTab('scene')}
+          compromisedIps={compromisedIps}
+          autoDefense={autoDefense}
+          onResetPath={handleResetPath}
+        />
+      )}
 
       {/* Device terminal window */}
-      {terminalDevice && <TerminalWindow device={terminalDevice} onClose={() => setTerminalDevice(null)} />}
+      {terminalDevice && (
+        <TerminalWindow
+          device={terminalDevice}
+          onClose={() => setTerminalDevice(null)}
+          onCompromise={handleCompromise}
+        />
+      )}
     </div>
   );
 }

@@ -31,6 +31,7 @@ function buildLayout() {
   const nodes = [];
   const edges = [];
   const labels = [];
+  const hubYByFloor = {};
   let core = null;
   let g = 0;
   let lastHubY = TOP;
@@ -41,6 +42,15 @@ function buildLayout() {
       // Floor 2 shows only 5 PCs in the network view.
       let pc = 0;
       devices = devices.filter((d) => (d.type === 'computer' ? (pc += 1) <= 5 : true));
+      // The Wi-Fi AP and Badge Reader are devices — hang them off the Floor-2 switch
+      // (previously they formed a stray hub row that looked like a dangling link).
+      const sw = devices.find((d) => d.type === 'switch');
+      const wifi = devices.find((d) => d.type === 'wifi');
+      if (sw && wifi) {
+        wifi.isHub = false;
+        links = links.map((l) => (l.hubId === wifi.id ? { ...l, hubId: sw.id } : l));
+        links.push({ fromId: wifi.id, hubId: sw.id });
+      }
     }
     const hubs = devices.filter((d) => d.isHub);
     const eps = devices.filter((d) => !d.isHub);
@@ -48,10 +58,10 @@ function buildLayout() {
     hubs.forEach((h, hi) => {
       const hubY = TOP + g * ROW_GAP;
       const rowY = hubY + FAN;
-      if (hi === 0) labels.push({ f, y: hubY });
+      if (hi === 0) { labels.push({ f, y: hubY }); hubYByFloor[f] = hubY; }
 
       if (h.type === 'coreswitch') core = { x: CENTER_X, y: hubY };
-      else nodes.push({ ...h, x: CENTER_X, y: hubY });
+      else nodes.push({ ...h, x: CENTER_X, y: hubY, floor: f });
 
       const list = eps.filter((d) => {
         const lk = links.find((l) => l.fromId === d.id);
@@ -60,8 +70,8 @@ function buildLayout() {
       const total = (list.length - 1) * GAP;
       list.forEach((d, idx) => {
         const x = CENTER_X - total / 2 + idx * GAP;
-        nodes.push({ ...d, x, y: rowY });
-        edges.push({ x1: CENTER_X, y1: hubY, x2: x, y2: rowY });
+        nodes.push({ ...d, x, y: rowY, floor: f });
+        edges.push({ x1: CENTER_X, y1: hubY, x2: x, y2: rowY, ip: d.ip, floor: f });
       });
 
       lastHubY = hubY;
@@ -70,27 +80,48 @@ function buildLayout() {
   });
 
   edges.push({ x1: CENTER_X, y1: TOP, x2: CENTER_X, y2: lastHubY, backbone: true });
-  return { nodes, edges, labels, core, width: 1040, height: lastHubY + FAN + 90 };
+  return { nodes, edges, labels, core, hubYByFloor, width: 1040, height: lastHubY + FAN + 90 };
 }
 
-function Chip({ x, y, type, title, testid, big }) {
-  const c = COLOR[type] || '#9fb2c0';
+function Chip({ x, y, type, title, testid, big, compromised }) {
+  const base = COLOR[type] || '#9fb2c0';
+  const c = compromised ? '#ff3b3b' : base;
   const Icon = ICON[type] || Monitor;
   const size = big ? 52 : 40;
   return (
     <div
       data-testid={testid}
+      data-compromised={compromised ? 'true' : 'false'}
       title={title}
-      className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-xl border bg-[#0b1620] transition-transform hover:scale-110"
-      style={{ left: x, top: y, width: size, height: size, borderColor: c, boxShadow: `0 0 14px -4px ${c}` }}
+      className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-xl border bg-[#0b1620] transition-transform hover:scale-110 ${compromised ? 'sabre-compromised z-10' : ''}`}
+      style={{ left: x, top: y, width: size, height: size, borderColor: c, boxShadow: compromised ? undefined : `0 0 14px -4px ${c}` }}
     >
+      {compromised && (
+        <>
+          <span className="pointer-events-none absolute inset-0 rounded-xl border-2 border-red-500/70 animate-ping" />
+          <span className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 rounded bg-red-600 px-1.5 py-[1px] text-[8px] font-bold uppercase tracking-wider text-white shadow">Compromised</span>
+        </>
+      )}
       <Icon style={{ color: c }} width={big ? 26 : 20} height={big ? 26 : 20} />
     </div>
   );
 }
 
-export default function NetworkView({ onClose }) {
-  const { nodes, edges, labels, core, width, height } = useMemo(buildLayout, []);
+export default function NetworkView({ onClose, compromisedIps = [], autoDefense = true, onResetPath }) {
+  const { nodes, edges, labels, core, hubYByFloor, width, height } = useMemo(buildLayout, []);
+
+  const show = !autoDefense; // attack path only revealed when Auto-Defense is OFF
+  const comp = useMemo(() => new Set(show ? compromisedIps : []), [show, compromisedIps]);
+  const hasPath = comp.size > 0;
+
+  // Red backbone span: from the highest to the lowest compromised floor hub (grows upward as the attacker ascends).
+  const spine = useMemo(() => {
+    const ys = [...comp]
+      .map((ip) => hubYByFloor[parseInt(String(ip).split('.')[2], 10)])
+      .filter((v) => typeof v === 'number');
+    if (ys.length < 2) return null;
+    return { y1: Math.min(...ys), y2: Math.max(...ys) };
+  }, [comp, hubYByFloor]);
 
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-[#070d13]" data-testid="network-view">
@@ -102,9 +133,33 @@ export default function NetworkView({ onClose }) {
             <p className="text-[11px] text-slate-400">2D topology · every device connects individually to its floor switch · switches uplink to the Core Switch (Floor 5) · hover for details</p>
           </div>
         </div>
-        <button onClick={onClose} data-testid="network-view-close" className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700">
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Attack-path status */}
+          {autoDefense ? (
+            <span className="flex items-center gap-1.5 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1.5 font-mono text-[11px] font-semibold text-emerald-300" data-testid="net-defense-status">
+              <ShieldAlert className="h-3.5 w-3.5" /> Auto-Defense ON · path hidden
+            </span>
+          ) : hasPath ? (
+            <span className="flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 font-mono text-[11px] font-semibold text-red-300 sabre-compromised" data-testid="net-attack-status">
+              <ShieldAlert className="h-3.5 w-3.5" /> Attack path · {comp.size} hop{comp.size > 1 ? 's' : ''}
+            </span>
+          ) : (
+            <span className="rounded-lg border border-slate-600 bg-slate-800/60 px-2.5 py-1.5 font-mono text-[11px] font-semibold text-slate-300" data-testid="net-defense-status">
+              Auto-Defense OFF · awaiting activity
+            </span>
+          )}
+          <button
+            onClick={() => onResetPath?.()}
+            data-testid="reset-attack-path-btn"
+            disabled={compromisedIps.length === 0}
+            className="rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 transition-colors hover:bg-slate-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Reset attack path
+          </button>
+          <button onClick={onClose} data-testid="network-view-close" className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div
@@ -121,14 +176,34 @@ export default function NetworkView({ onClose }) {
             {labels.map((l) => (
               <text key={`lbl-${l.f}`} x={LABEL_X} y={l.y + 4} fill="#5b7183" fontSize="12" fontFamily="monospace" fontWeight="bold">{`FLOOR ${l.f}`}</text>
             ))}
-            {edges.map((e, idx) => (
-              <line key={idx} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke={e.backbone ? '#38a0ff' : '#66e0ff'} strokeWidth={e.backbone ? 2.4 : 1.3} strokeOpacity={e.backbone ? 0.9 : 0.5} strokeLinecap="round" />
-            ))}
+            {edges.map((e, idx) => {
+              const hot = !e.backbone && comp.has(e.ip);
+              return (
+                <line
+                  key={idx}
+                  x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
+                  stroke={hot ? '#ff3b3b' : e.backbone ? '#38a0ff' : '#66e0ff'}
+                  strokeWidth={hot ? 2.6 : e.backbone ? 2.4 : 1.3}
+                  strokeOpacity={hot ? 0.95 : e.backbone ? 0.9 : 0.5}
+                  strokeLinecap="round"
+                  style={hot ? { filter: 'drop-shadow(0 0 4px rgba(255,59,59,0.9))' } : undefined}
+                />
+              );
+            })}
+            {/* Red backbone spine — traces the vertical route across compromised floors */}
+            {spine && (
+              <line
+                x1={CENTER_X} y1={spine.y1} x2={CENTER_X} y2={spine.y2}
+                stroke="#ff3b3b" strokeWidth={3} strokeOpacity={0.95} strokeLinecap="round"
+                style={{ filter: 'drop-shadow(0 0 5px rgba(255,59,59,0.95))' }}
+                data-testid="net-attack-spine"
+              />
+            )}
           </svg>
 
-          {core && <Chip x={core.x} y={core.y} type="coreswitch" title="Core Switch (Floor 5)" testid="net-node-core" big />}
+          {core && <Chip x={core.x} y={core.y} type="coreswitch" title="Core Switch (Floor 5)" testid="net-node-core" big compromised={comp.has('10.0.5.1')} />}
           {nodes.map((d) => (
-            <Chip key={d.id} x={d.x} y={d.y} type={d.type} title={`${d.name}\n${d.ip}\n${d.relationship}`} testid={`net-node-${d.id}`} />
+            <Chip key={d.id} x={d.x} y={d.y} type={d.type} title={`${d.name}\n${d.ip}\n${d.relationship}`} testid={`net-node-${d.id}`} compromised={comp.has(d.ip)} />
           ))}
         </div>
       </div>

@@ -5,6 +5,8 @@ import { getFloorDevices } from '../data/floorDevices';
 const ALL = [1, 2, 3, 4, 5].flatMap((f) => getFloorDevices(f, 1).devices);
 const byIp = {};
 ALL.forEach((d) => { byIp[d.ip] = d; });
+// Real network-view IP of the Backup Server (terminal shows a fictional prompt IP for it).
+const BACKUP_IP = (ALL.find((d) => d.name === 'Backup Server') || {}).ip || '10.0.5.16';
 const floorOf = (ip) => {
   const p = String(ip).split('.');
   return p.length === 4 ? parseInt(p[2], 10) : null;
@@ -85,7 +87,7 @@ function ipNeigh(floor, selfIp) {
   return lines;
 }
 
-export default function TerminalWindow({ device, onClose }) {
+export default function TerminalWindow({ device, onClose, onCompromise }) {
   const [lines, setLines] = useState([
     `# SABRE console — target: ${device?.name || 'unknown'} (${device?.ip || 'n/a'})`,
     "# type 'help' for commands. Start with: ssh " + (device?.ip || ''),
@@ -138,6 +140,7 @@ export default function TerminalWindow({ device, onClose }) {
       if (okUser && raw.trim() === host.pass) {
         out.push(...banner(host.promptIp));
         setSessions((s) => [...s, { u: host.promptUser, ip: host.promptIp, floor: floorOf(host.promptIp) }]);
+        onCompromise?.(host.promptIp);
       } else {
         out.push('Permission denied, please try again.');
       }
@@ -166,14 +169,14 @@ export default function TerminalWindow({ device, onClose }) {
     else if (cmd === 'ssh') {
       const target = parts[1];
       if (!target) out.push('usage: ssh [user@]hostname');
-      else if (target === 'back_serv_01') setSessions((s) => [...s, { u: 'Arnav', ip: '10.0.5.19', floor: 5 }]);
+      else if (target === 'back_serv_01') { setSessions((s) => [...s, { u: 'Arnav', ip: '10.0.5.19', floor: 5 }]); onCompromise?.(BACKUP_IP); }
       else {
         const host = HOSTS[target] || (byIp[target] ? { user: 'admin', pass: 'admin', promptUser: 'admin', promptIp: target } : null);
         if (!host) out.push(`ssh: connect to host ${target} port 22: No route to host`);
         else { setPending({ host }); setMode('login'); }
       }
     } else if (cmd === 'login') {
-      if (parts[1] === 'exec_2') setSessions((s) => [...s, { u: 'Arnav', ip: '10.0.4.18', floor: 4 }]);
+      if (parts[1] === 'exec_2') { setSessions((s) => [...s, { u: 'Arnav', ip: '10.0.4.18', floor: 4 }]); onCompromise?.('10.0.4.18'); }
       else out.push(`login: unknown service '${parts[1] || ''}'`);
     } else if (cmd === 'ip' && parts[1] === 'neigh') {
       out.push(...ipNeigh(cur.floor, cur.ip));
@@ -181,6 +184,8 @@ export default function TerminalWindow({ device, onClose }) {
       out.push(...NMAP_OUTPUT);
     } else if (trimmed.startsWith('smb://')) {
       out.push(...MEMO);
+      const m = trimmed.match(/smb:\/\/([0-9.]+)/);
+      if (m) onCompromise?.(m[1]);
     } else if (cmd === 'sudo' && parts[1] === 'apt' && parts[2] === 'purge') {
       out.push('Reading package lists... Done', 'Building dependency tree... Done', 'Are you sure want to clear all backup? [Y/N]');
       setMode('confirm');

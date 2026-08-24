@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ShieldCheck, Radar } from 'lucide-react';
 
-export default function ControlsToolbar() {
-  const [monitoring, setMonitoring] = useState(true);
+export default function ControlsToolbar({ autoDefense = true, onToggleDefense }) {
+  const monitoring = autoDefense;
   const safetyScore = 98;
 
   return (
@@ -42,7 +42,7 @@ export default function ControlsToolbar() {
 
       {/* Placeholder toggle */}
       <button
-        onClick={() => setMonitoring((m) => !m)}
+        onClick={() => onToggleDefense?.()}
         data-testid="monitoring-toggle-btn"
         aria-pressed={monitoring}
         className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/60 px-3 py-1.5 transition-colors hover:bg-slate-800"

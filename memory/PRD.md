@@ -52,4 +52,8 @@ techno font in blue/white.
 - Floor 3 explore view: computers reduced from 10 → 6.
 - Toolbar (`ControlsToolbar.js`) stripped of Sunset/Night/Day, Wireframe, and Specs; scene locked to `day` (App sets `timeOfDay='day'`, `wireframeMode=false`). Added beside the SABRE brand: pulsing "Actively reading telemetries / No ongoing threats" status, a "Safety Score 98/100" pill, and an "Auto-Defense" toggle (placeholder, functional on/off state).
 
+## Left Tabs + Network View (implemented — June 2026)
+- Hover-reveal left rail (`LeftTabsRail.js`): a slim strip on the far left expands on hover to show view tabs — "3D Building" and "Network View". `App.activeTab` = 'scene' | 'network'.
+- `NetworkView.js`: full-screen 2D topology on a grey grid. Root = Core Switch (Floor 5) at top-centre; a cyan backbone connects every floor's hub(s) up to the core; endpoints branch below each hub; F5 devices attach to the backbone. Devices are drawn as **lucide icon chips matching their type** (Router/Wi-Fi/Monitor/Printer/ScanLine/HardDrive/Server/Cloud/Boxes/ShieldAlert), colour-coded with glow; name/IP/relationship shown on hover (title). Canvas scrollable.
+
 ## Backlog / Future

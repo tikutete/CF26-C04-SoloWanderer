@@ -5,6 +5,8 @@ import FloorInspectorPanel from './components/FloorInspectorPanel';
 import ControlsToolbar from './components/ControlsToolbar';
 import ArchitecturalSpecsModal from './components/ArchitecturalSpecsModal';
 import IrisTransition from './components/IrisTransition';
+import LeftTabsRail from './components/LeftTabsRail';
+import NetworkView from './components/NetworkView';
 
 export default function App() {
   const [selectedFloor, setSelectedFloor] = useState(1);
@@ -13,6 +15,7 @@ export default function App() {
   const [isSpecsOpen, setIsSpecsOpen] = useState(false);
   const [viewMode, setViewMode] = useState('overview'); // overview | floor
   const [selectedDevice, setSelectedDevice] = useState(null);
+  const [activeTab, setActiveTab] = useState('scene'); // scene | network
 
   const irisRef = useRef(null);
   const clickPosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -99,6 +102,10 @@ export default function App() {
 
       {/* Cinematic iris transition overlay (reusable) */}
       <IrisTransition ref={irisRef} />
+
+      {/* Left hover-reveal tabs + Network View overlay */}
+      <LeftTabsRail active={activeTab} onSelect={setActiveTab} />
+      {activeTab === 'network' && <NetworkView onClose={() => setActiveTab('scene')} />}
     </div>
   );
 }

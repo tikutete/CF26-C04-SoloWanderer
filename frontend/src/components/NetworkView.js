@@ -21,8 +21,9 @@ const ICON = {
 
 const FLOORS = [1, 2, 3, 4, 5];
 const PAD = 80;
-const COL_W = 210;
-const LANE_GAP = 95;
+const COL_W = 240;
+const LANE_GAP = 110;
+const EP_DX = 56;
 const NODE_H = 30;
 const CORE_Y = 44;
 const BUS_Y = 120;
@@ -34,7 +35,8 @@ function buildLayout() {
   const nodes = [];
   const edges = [];
   const width = PAD * 2 + COL_W * 5;
-  const coreX = width / 2;
+  const coreX = PAD + COL_W * 4 + COL_W / 2; // core sits above Floor 5
+  const coreCY = CORE_Y + NODE_H / 2;
   let maxY = EP_START;
 
   FLOORS.forEach((f, i) => {
@@ -44,10 +46,12 @@ function buildLayout() {
     const colCenter = PAD + COL_W * i + COL_W / 2;
 
     if (f === 5) {
+      // Every F5 device connects individually to the Core Switch.
       eps.forEach((d, idx) => {
         const y = EP_START + idx * EP_GAP;
-        nodes.push({ ...d, x: colCenter, y });
-        edges.push({ x1: colCenter, y1: BUS_Y, x2: colCenter, y2: y + NODE_H / 2 });
+        const x = colCenter + EP_DX;
+        nodes.push({ ...d, x, y });
+        edges.push({ x1: coreX, y1: coreCY, x2: x, y2: y + NODE_H / 2 });
         maxY = Math.max(maxY, y);
       });
       return;
@@ -68,18 +72,21 @@ function buildLayout() {
     });
     Object.entries(groups).forEach(([hid, list]) => {
       const lx = laneX[hid] ?? colCenter;
+      const hubCY = HUB_Y + NODE_H / 2;
       list.forEach((d, idx) => {
         const y = EP_START + idx * EP_GAP;
-        nodes.push({ ...d, x: lx, y });
-        edges.push({ x1: lx, y1: HUB_Y + NODE_H, x2: lx, y2: y + NODE_H / 2 });
+        const x = lx + EP_DX;
+        nodes.push({ ...d, x, y });
+        // Individual line from the floor switch to each device (star, not chained).
+        edges.push({ x1: lx, y1: hubCY, x2: x, y2: y + NODE_H / 2 });
         maxY = Math.max(maxY, y);
       });
     });
   });
 
   const core = { x: coreX, y: CORE_Y };
-  edges.push({ x1: coreX, y1: CORE_Y + NODE_H, x2: coreX, y2: BUS_Y, backbone: true });
-  edges.push({ x1: PAD + COL_W / 2, y1: BUS_Y, x2: PAD + COL_W * 4 + COL_W / 2, y2: BUS_Y, backbone: true });
+  edges.push({ x1: coreX, y1: coreCY, x2: coreX, y2: BUS_Y, backbone: true });
+  edges.push({ x1: PAD + COL_W / 2, y1: BUS_Y, x2: coreX, y2: BUS_Y, backbone: true });
 
   return { nodes, edges, core, width, height: maxY + NODE_H + 70 };
 }

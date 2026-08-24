@@ -8,8 +8,8 @@ import IrisTransition from './components/IrisTransition';
 
 export default function App() {
   const [selectedFloor, setSelectedFloor] = useState(1);
-  const [timeOfDay, setTimeOfDay] = useState('sunset'); // sunset, night, day
-  const [wireframeMode, setWireframeMode] = useState(false);
+  const timeOfDay = 'day'; // locked to day
+  const wireframeMode = false;
   const [isSpecsOpen, setIsSpecsOpen] = useState(false);
   const [viewMode, setViewMode] = useState('overview'); // overview | floor
   const [selectedDevice, setSelectedDevice] = useState(null);
@@ -38,13 +38,7 @@ export default function App() {
   return (
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-slate-950 font-sans text-slate-100 select-none" data-testid="building-generator-app">
       {/* Top Toolbar */}
-      <ControlsToolbar
-        timeOfDay={timeOfDay}
-        setTimeOfDay={setTimeOfDay}
-        wireframeMode={wireframeMode}
-        setWireframeMode={setWireframeMode}
-        onOpenSpecs={() => setIsSpecsOpen(true)}
-      />
+      <ControlsToolbar />
 
       {/* Main Content: 3D Viewport + Side Inspector Panel */}
       <div className="relative flex-1 w-full h-full flex flex-col lg:flex-row overflow-hidden">

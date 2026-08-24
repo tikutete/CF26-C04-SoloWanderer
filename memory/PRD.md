@@ -47,8 +47,9 @@ techno font in blue/white.
 - Amber selected-floor highlight is disabled in Explore view so device colours stand out. Building interior is untouched. Endpoint labels show on hover/select; infrastructure labels always on.
 - Verified across all 5 floors via Playwright (device click → panel with correct IP/location) + full iris round-trip; no console errors.
 
+## Telemetry + Toolbar Update (implemented — June 2026)
+- Live telemetry feed (`TelemetryFeed.js`) in the right inspector, replacing Power Load & Structural Stability. Streams lines from `/frontend/public/sabre_telemetry.txt` (format `Fx | DEVICE | MSG`), one every random 0.3–1s, prepends a `[HH:MM:SS.mmm]` timestamp, loops back to line 1 at end, and keeps a history. "Show Detailed Telemetry" expands a scrollable log. FAIL messages render red.
+- Floor 3 explore view: computers reduced from 10 → 6.
+- Toolbar (`ControlsToolbar.js`) stripped of Sunset/Night/Day, Wireframe, and Specs; scene locked to `day` (App sets `timeOfDay='day'`, `wireframeMode=false`). Added beside the SABRE brand: pulsing "Actively reading telemetries / No ongoing threats" status, a "Safety Score 98/100" pill, and an "Auto-Defense" toggle (placeholder, functional on/off state).
+
 ## Backlog / Future
-- P1: Camera should smoothly tween (currently a jump-cut while black, which is intentional & correct).
-- P2: Reduce server-label crowding on Floor 5 (e.g. stagger or show on hover).
-- P2: Draw cross-floor uplink hints / animate packet flow along links.
-- P2: Wire iris to other scene changes (time-of-day, wireframe) using the reusable component.

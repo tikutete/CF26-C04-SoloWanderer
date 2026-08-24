@@ -1,7 +1,8 @@
 import React from 'react';
-import { Building2, Layers, ShieldCheck, Cpu, ArrowUpRight, CheckCircle2, Sparkles, Network, MapPin, Hash, X } from 'lucide-react';
+import { Building2, Layers, ShieldCheck, ArrowUpRight, Sparkles, Network, MapPin, Hash, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import TelemetryFeed from './TelemetryFeed';
 
 const FLOOR_DETAILS = {
   1: {
@@ -194,19 +195,16 @@ export default function FloorInspectorPanel({ selectedFloor, onSelectFloor, onOp
               <span className="text-slate-400 flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-amber-400" /> Style</span>
               <span className="text-slate-200 font-medium">{details.style}</span>
             </div>
-            <div className="flex justify-between py-1 border-b border-slate-800/50">
+            <div className="flex justify-between py-1">
               <span className="text-slate-400 flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> Materials</span>
               <span className="text-slate-200 font-medium">{details.materials}</span>
             </div>
-            <div className="flex justify-between py-1 border-b border-slate-800/50">
-              <span className="text-slate-400 flex items-center gap-1.5"><Cpu className="w-3.5 h-3.5 text-amber-400" /> Power Load</span>
-              <span className="text-slate-200 font-medium">{details.powerDraw}</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span className="text-slate-400 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Structural Stability</span>
-              <span className="text-emerald-400 font-mono font-bold">{details.stability}</span>
-            </div>
           </div>
+        </div>
+
+        {/* Live telemetry (replaces Power Load & Structural Stability) */}
+        <div className="mt-6">
+          <TelemetryFeed />
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import ArchitecturalSpecsModal from './components/ArchitecturalSpecsModal';
 import IrisTransition from './components/IrisTransition';
 import LeftTabsRail from './components/LeftTabsRail';
 import NetworkView from './components/NetworkView';
+import TerminalWindow from './components/TerminalWindow';
 
 export default function App() {
   const [selectedFloor, setSelectedFloor] = useState(1);
@@ -16,6 +17,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState('overview'); // overview | floor
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [activeTab, setActiveTab] = useState('scene'); // scene | network
+  const [terminalDevice, setTerminalDevice] = useState(null);
 
   const irisRef = useRef(null);
   const clickPosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -90,6 +92,7 @@ export default function App() {
           viewMode={viewMode}
           selectedDevice={selectedDevice}
           onClearDevice={() => setSelectedDevice(null)}
+          onOpenTerminal={(d) => setTerminalDevice(d)}
         />
       </div>
 
@@ -106,6 +109,9 @@ export default function App() {
       {/* Left hover-reveal tabs + Network View overlay */}
       <LeftTabsRail active={activeTab} onSelect={setActiveTab} />
       {activeTab === 'network' && <NetworkView onClose={() => setActiveTab('scene')} />}
+
+      {/* Device terminal window */}
+      {terminalDevice && <TerminalWindow device={terminalDevice} onClose={() => setTerminalDevice(null)} />}
     </div>
   );
 }

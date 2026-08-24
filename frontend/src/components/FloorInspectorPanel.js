@@ -57,7 +57,7 @@ const FLOOR_DETAILS = {
   }
 };
 
-export default function FloorInspectorPanel({ selectedFloor, onSelectFloor, onOpenSpecs, viewMode = 'overview', selectedDevice = null, onClearDevice }) {
+export default function FloorInspectorPanel({ selectedFloor, onSelectFloor, onOpenSpecs, viewMode = 'overview', selectedDevice = null, onClearDevice, onOpenTerminal }) {
   const details = FLOOR_DETAILS[selectedFloor] || FLOOR_DETAILS[1];
 
   if (viewMode === 'floor' && selectedDevice) {
@@ -114,6 +114,16 @@ export default function FloorInspectorPanel({ selectedFloor, onSelectFloor, onOp
               </div>
             </div>
           </div>
+
+          {!['camera', 'badge'].includes(selectedDevice.type) && (
+            <button
+              onClick={() => onOpenTerminal?.(selectedDevice)}
+              data-testid="open-terminal-btn"
+              className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/10 py-3 font-mono text-sm font-semibold uppercase tracking-wider text-emerald-200 transition-colors hover:bg-emerald-500/20"
+            >
+              <span className="text-emerald-400">&gt;_</span> Open Terminal Screen
+            </button>
+          )}
         </div>
 
         <div className="pt-6 mt-6 border-t border-slate-800">

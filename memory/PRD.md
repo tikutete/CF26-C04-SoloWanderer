@@ -56,4 +56,10 @@ techno font in blue/white.
 - Hover-reveal left rail (`LeftTabsRail.js`): a slim strip on the far left expands on hover to show view tabs — "3D Building" and "Network View". `App.activeTab` = 'scene' | 'network'.
 - `NetworkView.js`: full-screen 2D topology on a grey grid. Core Switch (Floor 5) sits at the top of a vertical backbone; each floor switch cascades below it, and every device fans out in a **horizontal row beneath its switch with its own individual connection line** (star, not chained). Devices are lucide icon chips matching their type, colour-coded with glow; name/IP/relationship on hover. Floor 2 is capped to 5 PCs in this view (3D explore unchanged). Canvas scrollable.
 
+## Device Terminal (implemented — June 2026)
+- `TerminalWindow.js`: draggable Linux-style terminal opened from the Device Inspector via **"Open Terminal Screen"** (`open-terminal-btn`), shown for every device except cameras & badge readers. Title bar with red/yellow/green dots + close; dark bg, monospace, green input, blinking caret; scripted (guided) interpreter, not a real shell.
+- Generic behaviour: `ssh <ip>` → `login:`/`Password:` (admin/admin fallback) → randomised Ubuntu 24.04 banner → prompt `user@ip`. SSH hops continue in the **same window** (prompt changes), `exit` pops back, closes at base. `ip neigh` lists the current floor's device IPs (reception/computers REACHABLE, printers/badge/camera FAILED, hubs STALE) + a router line.
+- Scripted attack chain (from any Floor-1 device): `ssh 10.0.1.10` (C4entrp/root) → `ip neigh` → `ssh 10.0.1.12` (recep2/lobby2) → `nmap` (Samba smbstatus output) → `smb://10.0.3.20/memo` (memo text) → `login exec_2 --user dsvr_backup` (Arnav@10.0.4.18) → `ssh back_serv_01 --user srv_backup` (Arnav@10.0.5.19) → `sudo apt purge` → `[Y/N]` → "all backups purged successfully". Unknown commands → "command not found".
+- Verified end-to-end via Playwright (all steps pass, no console errors).
+
 ## Backlog / Future

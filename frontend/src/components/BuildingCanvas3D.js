@@ -208,12 +208,12 @@ export default function BuildingCanvas3D({ selectedFloor, onSelectFloor, timeOfD
       };
       // Modern structure: open floor plates, four corner columns, and a solid rear spine.
       add(new THREE.BoxGeometry(width + 0.8, 0.34, depth + 0.8), frameMetal, [0, y + 0.18, 0]);
-      add(new THREE.BoxGeometry(width + 0.8, 0.34, depth + 0.8), frameMetal, [0, y + FLOOR_HEIGHT - 0.12, 0]);
+      add(new THREE.BoxGeometry(width + 0.8, 0.34, depth + 0.8), frameMetal, [0, y + FLOOR_HEIGHT - 0.12, 0], { isRoof: true });
       [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([x, z]) => add(new THREE.BoxGeometry(0.55, FLOOR_HEIGHT, 0.55), baseMetal, [x * (width / 2 - 0.25), y + FLOOR_HEIGHT / 2, z * (depth / 2 - 0.25)]));
       add(new THREE.BoxGeometry(width - 0.8, FLOOR_HEIGHT - 0.7, 0.45), baseMetal, [0, y + FLOOR_HEIGHT / 2, -depth / 2 + 0.25]);
       // One completely glazed front elevation.
-      add(new THREE.BoxGeometry(width - 0.8, FLOOR_HEIGHT - 0.7, 0.12), glass, [0, y + FLOOR_HEIGHT / 2, depth / 2 - 0.06]);
-      for (let column = -2; column <= 2; column += 1) add(new THREE.BoxGeometry(0.1, FLOOR_HEIGHT - 0.6, 0.2), frameMetal, [column * 2.65, y + FLOOR_HEIGHT / 2, depth / 2]);
+      add(new THREE.BoxGeometry(width - 0.8, FLOOR_HEIGHT - 0.7, 0.12), glass, [0, y + FLOOR_HEIGHT / 2, depth / 2 - 0.06], { isFront: true });
+      for (let column = -2; column <= 2; column += 1) add(new THREE.BoxGeometry(0.1, FLOOR_HEIGHT - 0.6, 0.2), frameMetal, [column * 2.65, y + FLOOR_HEIGHT / 2, depth / 2], { isFront: true });
       // Five visible computers per floor, with deterministic variety in desk layout.
       const layout = index % 3;
       const computerXs = layout === 0 ? [-5, -2.5, 0, 2.5, 5] : layout === 1 ? [-4.7, -2.35, 0, 2.35, 4.7] : [-5, -2.5, 0, 2.5, 5];
@@ -222,25 +222,25 @@ export default function BuildingCanvas3D({ selectedFloor, onSelectFloor, timeOfD
       // Three rows of five stations: fifteen illuminated PCs on every floor.
       deskRows.forEach((computerDepth, row) => computerXs.forEach((x, workstation) => {
         const screenMaterial = (workstation + row + index) % 4 === 0 ? warmScreen : screen;
-        add(new THREE.BoxGeometry(2.05, 0.14, 0.9), baseMetal, [x, deskY, computerDepth]);
-        add(new THREE.BoxGeometry(0.88, 0.56, 0.06), screenMaterial, [x, deskY + 0.42, computerDepth - 0.22]);
-        add(new THREE.BoxGeometry(0.08, 0.5, 0.08), frameMetal, [x, deskY + 0.12, computerDepth - 0.22]);
-        add(new THREE.BoxGeometry(0.72, 0.04, 0.3), frameMetal, [x + (workstation % 2 ? 0.28 : -0.28), deskY + 0.1, computerDepth + 0.08]);
+        add(new THREE.BoxGeometry(2.05, 0.14, 0.9), baseMetal, [x, deskY, computerDepth], { isFurniture: true });
+        add(new THREE.BoxGeometry(0.88, 0.56, 0.06), screenMaterial, [x, deskY + 0.42, computerDepth - 0.22], { isFurniture: true });
+        add(new THREE.BoxGeometry(0.08, 0.5, 0.08), frameMetal, [x, deskY + 0.12, computerDepth - 0.22], { isFurniture: true });
+        add(new THREE.BoxGeometry(0.72, 0.04, 0.3), frameMetal, [x + (workstation % 2 ? 0.28 : -0.28), deskY + 0.1, computerDepth + 0.08], { isFurniture: true });
         // Every station gets a chair, with alternating arrangements each floor.
         const chairX = x + (layout === 1 ? 0.18 : -0.12);
         const chairZ = computerDepth + (row === 0 ? 1.0 : row === 1 ? 0.88 : 0.78);
-        add(new THREE.BoxGeometry(0.92, 0.12, 0.72), frameMetal, [chairX, deskY - 0.62, chairZ]);
-        add(new THREE.BoxGeometry(0.1, 0.58, 0.1), frameMetal, [chairX - 0.32, deskY - 0.88, chairZ]);
-        add(new THREE.BoxGeometry(0.1, 0.58, 0.1), frameMetal, [chairX + 0.32, deskY - 0.88, chairZ]);
+        add(new THREE.BoxGeometry(0.92, 0.12, 0.72), frameMetal, [chairX, deskY - 0.62, chairZ], { isFurniture: true });
+        add(new THREE.BoxGeometry(0.1, 0.58, 0.1), frameMetal, [chairX - 0.32, deskY - 0.88, chairZ], { isFurniture: true });
+        add(new THREE.BoxGeometry(0.1, 0.58, 0.1), frameMetal, [chairX + 0.32, deskY - 0.88, chairZ], { isFurniture: true });
       }));
       // Small biophilic pockets and changing floor layouts make each level feel occupied.
       const plantX = index % 2 === 0 ? -5.8 : 5.8;
       const plantZ = layout === 2 ? -3.8 : -2.8;
       const plantPot = material(index % 2 ? 0xe0a05c : 0xc96c4c, { roughness: 0.7 });
       const plantLeaf = material(index % 2 ? 0x5ca26a : 0x3b8e77, { roughness: 0.8, emissive: 0x10291e, emissiveIntensity: 0.2 });
-      add(new THREE.CylinderGeometry(0.48, 0.6, 0.72, 12), plantPot, [plantX, y + 0.66, plantZ]);
-      add(new THREE.SphereGeometry(0.82 + (index % 2) * 0.15, 12, 8), plantLeaf, [plantX, y + 1.62, plantZ]);
-      if (index % 2 === 1) add(new THREE.BoxGeometry(1.2, 0.65, 0.85), baseMetal, [-plantX * 0.55, y + 0.58, -3.6]);
+      add(new THREE.CylinderGeometry(0.48, 0.6, 0.72, 12), plantPot, [plantX, y + 0.66, plantZ], { isFurniture: true });
+      add(new THREE.SphereGeometry(0.82 + (index % 2) * 0.15, 12, 8), plantLeaf, [plantX, y + 1.62, plantZ], { isFurniture: true });
+      if (index % 2 === 1) add(new THREE.BoxGeometry(1.2, 0.65, 0.85), baseMetal, [-plantX * 0.55, y + 0.58, -3.6], { isFurniture: true });
       // Bright, unambiguous highlight frame around every clickable floor.
       const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(width + 1, FLOOR_HEIGHT + 0.08, depth + 1)), new THREE.LineBasicMaterial({ color: 0xffb454, transparent: true, opacity: 0.06 }));
       outline.position.y = y + FLOOR_HEIGHT / 2; outline.userData = { floorNumber: number, isFloorOutline: true }; group.add(outline);
@@ -285,9 +285,13 @@ export default function BuildingCanvas3D({ selectedFloor, onSelectFloor, timeOfD
 
     if (viewMode === 'floor') {
       const fy = (selectedFloor - 1) * FLOOR_HEIGHT;
-      camera.position.set(2.5, fy + 4.8, 15.5);
-      controls.target.set(0, fy + 3.0, 0);
-      floors?.children.forEach((group) => { group.visible = group.userData.floorNumber === selectedFloor; });
+      camera.position.set(2.5, fy + 5.4, 18.5);
+      controls.target.set(0, fy + 2.8, 0);
+      floors?.children.forEach((group) => {
+        group.visible = group.userData.floorNumber === selectedFloor;
+        // Strip furniture, roof and front wall so the network map is clearly visible.
+        group.traverse((o) => { if (o.userData?.isFurniture || o.userData?.isRoof || o.userData?.isFront) o.visible = false; });
+      });
       // Build the interactive device / network map for this floor.
       clearLayer();
       const { devices, links } = getFloorDevices(selectedFloor, FLOOR_HEIGHT);
@@ -305,7 +309,10 @@ export default function BuildingCanvas3D({ selectedFloor, onSelectFloor, timeOfD
     } else {
       camera.position.set(27, 19, 35);
       controls.target.set(0, 13, 0);
-      floors?.children.forEach((group) => { group.visible = true; });
+      floors?.children.forEach((group) => {
+        group.visible = true;
+        group.traverse((o) => { if (o.userData?.isFurniture || o.userData?.isRoof || o.userData?.isFront) o.visible = true; });
+      });
       if (layer) layer.visible = false;
       clearLayer();
     }

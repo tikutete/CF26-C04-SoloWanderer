@@ -51,7 +51,7 @@ const SPECS = {
     hubs: [{ id: 'sw', type: 'switch', name: 'Floor-3 Access Switch' }],
     endpoints: [
       { hub: 'sw', type: 'badge', name: 'Floor-3 Badge Reader' },
-      ...Array.from({ length: 10 }, (_, i) => ({ hub: 'sw', type: 'computer', name: `Workstation ${i + 1}` })),
+      ...Array.from({ length: 6 }, (_, i) => ({ hub: 'sw', type: 'computer', name: `Workstation ${i + 1}` })),
       { hub: 'sw', type: 'printer', name: 'Printer 1' },
       { hub: 'sw', type: 'printer', name: 'Printer 2' },
       { hub: 'sw', type: 'filestore', name: 'File Storage Unit 1' },
@@ -119,7 +119,7 @@ export function getFloorDevices(floorNumber, floorHeight) {
 
   const baseY = (floorNumber - 1) * floorHeight;
   const yNode = baseY + 3.0;
-  const yHub = baseY + 3.9;
+  const yHub = baseY + 4.0;
   const location = `Floor ${floorNumber} · ${spec.floorName}`;
 
   const counters = { ep: 9, sw: 0 };
@@ -142,8 +142,8 @@ export function getFloorDevices(floorNumber, floorHeight) {
   // Hubs across the back row.
   const hn = spec.hubs.length;
   spec.hubs.forEach((hub, i) => {
-    const x = hn === 1 ? 0 : (i / (hn - 1) - 0.5) * 7;
-    const position = [x, yHub, -3.0];
+    const x = hn === 1 ? 0 : (i / (hn - 1) - 0.5) * 8;
+    const position = [x, yHub, -3.8];
     const meta = {
       id: nextId(hub.type),
       type: hub.type,
@@ -160,18 +160,18 @@ export function getFloorDevices(floorNumber, floorHeight) {
     devices.push(meta);
   });
 
-  // Endpoints laid out in a grid in front of the hubs.
+  // Endpoints laid out in a roomy grid in front of the hubs.
   const eps = spec.endpoints;
-  const perRow = 6;
-  const spacingX = 2.05;
-  const spacingZ = 1.7;
+  const perRow = 5;
+  const spacingX = 2.75;
+  const spacingZ = 2.55;
   const links = [];
   eps.forEach((e, idx) => {
     const row = Math.floor(idx / perRow);
     const colCount = Math.min(perRow, eps.length - row * perRow);
     const col = idx - row * perRow;
     const x = (col - (colCount - 1) / 2) * spacingX;
-    const z = -0.6 + row * spacingZ;
+    const z = -1.3 + row * spacingZ;
     const position = [x, yNode, z];
     const parent = hubMeta[e.hub];
     const meta = {

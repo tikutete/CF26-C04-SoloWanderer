@@ -133,7 +133,9 @@ export default function TerminalWindow({ device, onClose }) {
     }
     if (mode === 'password') {
       const host = pending?.host;
-      if (host && pending?.user === host.user && raw === host.pass) {
+      const u = (pending?.user || '').trim().toLowerCase();
+      const okUser = host && (u === host.user.toLowerCase() || u === 'root');
+      if (okUser && raw.trim() === host.pass) {
         out.push(...banner(host.promptIp));
         setSessions((s) => [...s, { u: host.promptUser, ip: host.promptIp, floor: floorOf(host.promptIp) }]);
       } else {

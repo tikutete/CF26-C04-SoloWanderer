@@ -19,76 +19,58 @@ const ICON = {
   domain: Boxes, firewall: ShieldAlert,
 };
 
-const FLOORS = [1, 2, 3, 4, 5];
-const PAD = 80;
-const COL_W = 240;
-const LANE_GAP = 110;
-const EP_DX = 56;
-const NODE_H = 30;
-const CORE_Y = 44;
-const BUS_Y = 120;
-const HUB_Y = 180;
-const EP_START = 250;
-const EP_GAP = 46;
+const ORDER = [5, 4, 3, 2, 1]; // Core (F5) at the top, cascading down
+const CENTER_X = 520;
+const GAP = 64;       // horizontal spacing between devices in a row
+const ROW_GAP = 176;  // vertical spacing between switch groups
+const TOP = 74;       // y of the top (core) switch
+const FAN = 82;       // vertical drop from a switch to its device row
+const LABEL_X = 60;
 
 function buildLayout() {
   const nodes = [];
   const edges = [];
-  const width = PAD * 2 + COL_W * 5;
-  const coreX = PAD + COL_W * 4 + COL_W / 2; // core sits above Floor 5
-  const coreCY = CORE_Y + NODE_H / 2;
-  let maxY = EP_START;
+  const labels = [];
+  let core = null;
+  let g = 0;
+  let lastHubY = TOP;
 
-  FLOORS.forEach((f, i) => {
-    const { devices, links } = getFloorDevices(f, 1);
+  ORDER.forEach((f) => {
+    let { devices, links } = getFloorDevices(f, 1);
+    if (f === 2) {
+      // Floor 2 shows only 5 PCs in the network view.
+      let pc = 0;
+      devices = devices.filter((d) => (d.type === 'computer' ? (pc += 1) <= 5 : true));
+    }
     const hubs = devices.filter((d) => d.isHub);
     const eps = devices.filter((d) => !d.isHub);
-    const colCenter = PAD + COL_W * i + COL_W / 2;
 
-    if (f === 5) {
-      // Every F5 device connects individually to the Core Switch.
-      eps.forEach((d, idx) => {
-        const y = EP_START + idx * EP_GAP;
-        const x = colCenter + EP_DX;
-        nodes.push({ ...d, x, y });
-        edges.push({ x1: coreX, y1: coreCY, x2: x, y2: y + NODE_H / 2 });
-        maxY = Math.max(maxY, y);
-      });
-      return;
-    }
-
-    const laneX = {};
     hubs.forEach((h, hi) => {
-      const lx = colCenter + (hi - (hubs.length - 1) / 2) * LANE_GAP;
-      laneX[h.id] = lx;
-      nodes.push({ ...h, x: lx, y: HUB_Y });
-      edges.push({ x1: lx, y1: BUS_Y, x2: lx, y2: HUB_Y + NODE_H / 2 });
-    });
-    const groups = {};
-    eps.forEach((d) => {
-      const lk = links.find((l) => l.fromId === d.id);
-      const hid = lk ? lk.hubId : hubs[0].id;
-      (groups[hid] = groups[hid] || []).push(d);
-    });
-    Object.entries(groups).forEach(([hid, list]) => {
-      const lx = laneX[hid] ?? colCenter;
-      const hubCY = HUB_Y + NODE_H / 2;
-      list.forEach((d, idx) => {
-        const y = EP_START + idx * EP_GAP;
-        const x = lx + EP_DX;
-        nodes.push({ ...d, x, y });
-        // Individual line from the floor switch to each device (star, not chained).
-        edges.push({ x1: lx, y1: hubCY, x2: x, y2: y + NODE_H / 2 });
-        maxY = Math.max(maxY, y);
+      const hubY = TOP + g * ROW_GAP;
+      const rowY = hubY + FAN;
+      if (hi === 0) labels.push({ f, y: hubY });
+
+      if (h.type === 'coreswitch') core = { x: CENTER_X, y: hubY };
+      else nodes.push({ ...h, x: CENTER_X, y: hubY });
+
+      const list = eps.filter((d) => {
+        const lk = links.find((l) => l.fromId === d.id);
+        return lk ? lk.hubId === h.id : hubs[0].id === h.id;
       });
+      const total = (list.length - 1) * GAP;
+      list.forEach((d, idx) => {
+        const x = CENTER_X - total / 2 + idx * GAP;
+        nodes.push({ ...d, x, y: rowY });
+        edges.push({ x1: CENTER_X, y1: hubY, x2: x, y2: rowY });
+      });
+
+      lastHubY = hubY;
+      g += 1;
     });
   });
 
-  const core = { x: coreX, y: CORE_Y };
-  edges.push({ x1: coreX, y1: coreCY, x2: coreX, y2: BUS_Y, backbone: true });
-  edges.push({ x1: PAD + COL_W / 2, y1: BUS_Y, x2: coreX, y2: BUS_Y, backbone: true });
-
-  return { nodes, edges, core, width, height: maxY + NODE_H + 70 };
+  edges.push({ x1: CENTER_X, y1: TOP, x2: CENTER_X, y2: lastHubY, backbone: true });
+  return { nodes, edges, labels, core, width: 1040, height: lastHubY + FAN + 90 };
 }
 
 function Chip({ x, y, type, title, testid, big }) {
@@ -99,7 +81,7 @@ function Chip({ x, y, type, title, testid, big }) {
     <div
       data-testid={testid}
       title={title}
-      className="group absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-xl border bg-[#0b1620] transition-transform hover:scale-110"
+      className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-xl border bg-[#0b1620] transition-transform hover:scale-110"
       style={{ left: x, top: y, width: size, height: size, borderColor: c, boxShadow: `0 0 14px -4px ${c}` }}
     >
       <Icon style={{ color: c }} width={big ? 26 : 20} height={big ? 26 : 20} />
@@ -108,7 +90,7 @@ function Chip({ x, y, type, title, testid, big }) {
 }
 
 export default function NetworkView({ onClose }) {
-  const { nodes, edges, core, width, height } = useMemo(buildLayout, []);
+  const { nodes, edges, labels, core, width, height } = useMemo(buildLayout, []);
 
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-[#070d13]" data-testid="network-view">
@@ -117,7 +99,7 @@ export default function NetworkView({ onClose }) {
           <Network className="h-5 w-5 text-cyan-300" />
           <div>
             <h2 className="font-tech text-base font-bold tracking-widest text-white">NETWORK VIEW</h2>
-            <p className="text-[11px] text-slate-400">2D topology · all floors · switches uplink to Core Switch (Floor 5) · hover a device for details</p>
+            <p className="text-[11px] text-slate-400">2D topology · every device connects individually to its floor switch · switches uplink to the Core Switch (Floor 5) · hover for details</p>
           </div>
         </div>
         <button onClick={onClose} data-testid="network-view-close" className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700">
@@ -136,17 +118,17 @@ export default function NetworkView({ onClose }) {
       >
         <div className="relative" style={{ width, height }}>
           <svg width={width} height={height} className="absolute inset-0">
-            {FLOORS.map((f, i) => (
-              <text key={`lbl-${f}`} x={PAD + COL_W * i + COL_W / 2} y={CORE_Y - 16} textAnchor="middle" fill="#5b7183" fontSize="12" fontFamily="monospace" fontWeight="bold">{`FLOOR ${f}`}</text>
+            {labels.map((l) => (
+              <text key={`lbl-${l.f}`} x={LABEL_X} y={l.y + 4} fill="#5b7183" fontSize="12" fontFamily="monospace" fontWeight="bold">{`FLOOR ${l.f}`}</text>
             ))}
             {edges.map((e, idx) => (
               <line key={idx} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke={e.backbone ? '#38a0ff' : '#66e0ff'} strokeWidth={e.backbone ? 2.4 : 1.3} strokeOpacity={e.backbone ? 0.9 : 0.5} strokeLinecap="round" />
             ))}
           </svg>
 
-          <Chip x={core.x} y={core.y + NODE_H / 2} type="coreswitch" title="Core Switch (Floor 5)" testid="net-node-core" big />
+          {core && <Chip x={core.x} y={core.y} type="coreswitch" title="Core Switch (Floor 5)" testid="net-node-core" big />}
           {nodes.map((d) => (
-            <Chip key={d.id} x={d.x} y={d.y + NODE_H / 2} type={d.type} title={`${d.name}\n${d.ip}\n${d.relationship}`} testid={`net-node-${d.id}`} />
+            <Chip key={d.id} x={d.x} y={d.y} type={d.type} title={`${d.name}\n${d.ip}\n${d.relationship}`} testid={`net-node-${d.id}`} />
           ))}
         </div>
       </div>

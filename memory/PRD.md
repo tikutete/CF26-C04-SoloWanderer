@@ -54,6 +54,6 @@ techno font in blue/white.
 
 ## Left Tabs + Network View (implemented — June 2026)
 - Hover-reveal left rail (`LeftTabsRail.js`): a slim strip on the far left expands on hover to show view tabs — "3D Building" and "Network View". `App.activeTab` = 'scene' | 'network'.
-- `NetworkView.js`: full-screen 2D topology on a grey grid. Root = Core Switch (Floor 5) at top-centre; a cyan backbone connects every floor's hub(s) up to the core; endpoints branch below each hub; F5 devices attach to the backbone. Devices are drawn as **lucide icon chips matching their type** (Router/Wi-Fi/Monitor/Printer/ScanLine/HardDrive/Server/Cloud/Boxes/ShieldAlert), colour-coded with glow; name/IP/relationship shown on hover (title). Canvas scrollable.
+- `NetworkView.js`: full-screen 2D topology on a grey grid. Core Switch (Floor 5) sits at the top of a vertical backbone; each floor switch cascades below it, and every device fans out in a **horizontal row beneath its switch with its own individual connection line** (star, not chained). Devices are lucide icon chips matching their type, colour-coded with glow; name/IP/relationship on hover. Floor 2 is capped to 5 PCs in this view (3D explore unchanged). Canvas scrollable.
 
 ## Backlog / Future

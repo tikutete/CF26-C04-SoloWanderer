@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Layers, ShieldCheck, Cpu, ArrowUpRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { Building2, Layers, ShieldCheck, Cpu, ArrowUpRight, CheckCircle2, Sparkles, Network, MapPin, Hash, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 
@@ -56,8 +56,73 @@ const FLOOR_DETAILS = {
   }
 };
 
-export default function FloorInspectorPanel({ selectedFloor, onSelectFloor, onOpenSpecs }) {
+export default function FloorInspectorPanel({ selectedFloor, onSelectFloor, onOpenSpecs, viewMode = 'overview', selectedDevice = null, onClearDevice }) {
   const details = FLOOR_DETAILS[selectedFloor] || FLOOR_DETAILS[1];
+
+  if (viewMode === 'floor' && selectedDevice) {
+    return (
+      <div
+        className="w-full lg:w-96 bg-slate-900/90 backdrop-blur-2xl border-l border-cyan-400/25 p-6 flex flex-col justify-between shadow-2xl z-20 overflow-y-auto"
+        data-testid="device-inspector-panel"
+      >
+        <div>
+          <div className="flex items-center justify-between pb-6 border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-cyan-300">
+                <Network className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-cyan-400/80 font-mono font-semibold">Device Inspector</p>
+                <h2 className="text-xl font-serif font-bold text-white tracking-wide" data-testid="device-name">{selectedDevice.name}</h2>
+              </div>
+            </div>
+            <button
+              onClick={onClearDevice}
+              data-testid="device-close-btn"
+              className="w-8 h-8 rounded-lg bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="py-6 space-y-4">
+            <Badge className="bg-cyan-500/15 text-cyan-200 border border-cyan-400/30 px-3 py-1 text-xs font-mono" data-testid="device-kind">
+              {selectedDevice.kind}
+            </Badge>
+
+            <div className="bg-slate-950/60 rounded-2xl p-5 border border-cyan-400/20 space-y-4 shadow-inner">
+              <div className="space-y-1.5">
+                <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                  <Hash className="w-3.5 h-3.5 text-cyan-400" /> IP Address
+                </p>
+                <p className="text-lg font-mono font-bold text-cyan-300" data-testid="device-ip">{selectedDevice.ip}</p>
+              </div>
+
+              <div className="space-y-1.5 pt-3 border-t border-slate-800/80">
+                <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                  <Network className="w-3.5 h-3.5 text-cyan-400" /> Network Relationship
+                </p>
+                <p className="text-sm text-slate-200 leading-relaxed font-light" data-testid="device-relationship">{selectedDevice.relationship}</p>
+              </div>
+
+              <div className="space-y-1.5 pt-3 border-t border-slate-800/80">
+                <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-cyan-400" /> Physical Location
+                </p>
+                <p className="text-sm text-slate-200 font-medium" data-testid="device-location">{selectedDevice.location}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6 mt-6 border-t border-slate-800">
+          <p className="text-[11px] text-center text-slate-500">
+            SABRE • Click another device to inspect it
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 

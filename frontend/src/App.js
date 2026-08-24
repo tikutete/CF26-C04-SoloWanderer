@@ -12,6 +12,7 @@ export default function App() {
   const [wireframeMode, setWireframeMode] = useState(false);
   const [isSpecsOpen, setIsSpecsOpen] = useState(false);
   const [viewMode, setViewMode] = useState('overview'); // overview | floor
+  const [selectedDevice, setSelectedDevice] = useState(null);
 
   const irisRef = useRef(null);
   const clickPosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -19,16 +20,19 @@ export default function App() {
   // Fired when a floor is clicked in the 3D scene — records the approximate screen origin for the iris.
   const handleSelectFloor = useCallback((floor, pos) => {
     setSelectedFloor(floor);
+    setSelectedDevice(null);
     if (pos) clickPosRef.current = pos;
   }, []);
 
+  const handleSelectDevice = useCallback((device) => setSelectedDevice(device), []);
+
   const enterFloor = () => {
     const { x, y } = clickPosRef.current;
-    irisRef.current?.play({ x, y, onCovered: () => setViewMode('floor') });
+    irisRef.current?.play({ x, y, onCovered: () => { setViewMode('floor'); setSelectedDevice(null); } });
   };
 
   const exitFloor = () => {
-    irisRef.current?.play({ onCovered: () => setViewMode('overview') });
+    irisRef.current?.play({ onCovered: () => { setViewMode('overview'); setSelectedDevice(null); } });
   };
 
   return (
@@ -52,6 +56,8 @@ export default function App() {
             timeOfDay={timeOfDay}
             wireframeMode={wireframeMode}
             viewMode={viewMode}
+            selectedDevice={selectedDevice?.id ?? null}
+            onSelectDevice={handleSelectDevice}
           />
 
           {/* Explore prompt (overview) */}
@@ -84,6 +90,9 @@ export default function App() {
           selectedFloor={selectedFloor}
           onSelectFloor={handleSelectFloor}
           onOpenSpecs={() => setIsSpecsOpen(true)}
+          viewMode={viewMode}
+          selectedDevice={selectedDevice}
+          onClearDevice={() => setSelectedDevice(null)}
         />
       </div>
 

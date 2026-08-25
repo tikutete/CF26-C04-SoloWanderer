@@ -19,7 +19,7 @@
 // ---- EDIT THESE ----
 const char* WIFI_SSID = "YOUR_WIFI";
 const char* WIFI_PASS = "YOUR_WIFI_PASSWORD";
-const char* BACKEND_URL = "https://f693d573-8753-4110-9a2b-ce497b53f8c7.preview.emergentagent.com";
+const char* BACKEND_URL = "https://inspect-deploy-6.preview.emergentagent.com";
 
 #define SS_PIN  5
 #define RST_PIN 22

@@ -19,7 +19,7 @@ import datetime
 import requests
 
 # ---- EDIT THIS to your SABRE backend URL (no trailing slash) ----
-BACKEND_URL = "https://f693d573-8753-4110-9a2b-ce497b53f8c7.preview.emergentagent.com"
+BACKEND_URL = "https://inspect-deploy-6.preview.emergentagent.com"
 
 WELCOME = """Welcome to Ubuntu 24.04 LTS (GNU/Linux 6.8.0-generic x86_64)
 

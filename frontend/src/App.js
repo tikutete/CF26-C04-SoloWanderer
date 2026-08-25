@@ -7,6 +7,7 @@ import ArchitecturalSpecsModal from './components/ArchitecturalSpecsModal';
 import IrisTransition from './components/IrisTransition';
 import LeftTabsRail from './components/LeftTabsRail';
 import NetworkView from './components/NetworkView';
+import SandboxView from './components/SandboxView';
 import TerminalWindow from './components/TerminalWindow';
 
 export default function App() {
@@ -125,6 +126,9 @@ export default function App() {
           onResetPath={handleResetPath}
           attackLog={attackLog}
         />
+      )}
+      {activeTab === 'sandbox' && (
+        <SandboxView onClose={() => setActiveTab('scene')} />
       )}
 
       {/* Device terminal window */}

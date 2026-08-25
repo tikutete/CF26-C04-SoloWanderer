@@ -215,20 +215,40 @@ frontend:
             In the "Show more details" modal (ATTACK STEP BREAKDOWN) the MITRE + Attack type text was made larger
             and non-thin (13px / medium+bold) for readability.
 
+  - task: "Sandbox View - Threat Injector (MITRE inject + trace path)"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/components/SandboxView.js, frontend/src/components/SandboxSabrePanel.js, frontend/src/data/networkLayout.js, frontend/src/data/mitreAttacks.js, frontend/src/components/LeftTabsRail.js, frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            New left-rail tab "Sandbox View" -> SandboxView.js. Canvas identical to Network View (shared networkLayout.js).
+            Two mode buttons: Threat Injector (functional) + LLM Tester (placeholder overlay).
+            THREAT INJECTOR FLOW: click a device node -> popover "Select attack type" (MITRE tactics) -> click a tactic ->
+            smooth transition to "Select attack subtype" (numbered techniques). Injection stored (one per device). Repeat on
+            devices across floors. Right SABRE panel lists injections + "Trace possible path" button + Reset.
+            TRACE: path = injected devices (floor ascending) -> each floor's Wi-Fi hub above the highest injected floor ->
+            Core Switch (Floor 5). Progressive red dashed path + rings; breakdown (origin/hop/target) + "Show more details" modal.
+            SELF-VERIFIED via Playwright: sandbox opens, popover type->subtype works, injection lists, trace shows breakdown,
+            details modal opens, no console errors. Needs full interactive retest.
+
 metadata:
   created_by: "main_agent"
-  version: "1.1"
+  version: "1.2"
   test_sequence: 0
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Auto-Defense ON defensive demo (SABRE panel + reconstruction)"
-    - "Attack-path red glow in Network View driven by Terminal chain"
+    - "Sandbox View - Threat Injector (MITRE inject + trace path)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
     - agent: "main"
-      message: "Frontend-only feature (no backend changes). Please test the attack-path glow flow as described in the task's status_history TEST FLOW. Verify progressive red glow, red links, red backbone spine, Reset button, and that ON hides the path."
+      message: "Frontend-only feature (no backend changes). Added Sandbox View -> Threat Injector. Self-verified core flow via Playwright (no console errors). Awaiting user go-ahead for full interactive frontend testing."

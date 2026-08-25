@@ -62,4 +62,13 @@ techno font in blue/white.
 - Scripted attack chain (from any Floor-1 device): `ssh 10.0.1.10` (C4entrp/root) → `ip neigh` → `ssh 10.0.1.12` (recep2/lobby2) → `nmap` (Samba smbstatus output) → `smb://10.0.3.20/memo` (memo text) → `login exec_2 --user dsvr_backup` (Arnav@10.0.4.18) → `ssh back_serv_01 --user srv_backup` (Arnav@10.0.5.19) → `sudo apt purge` → `[Y/N]` → "all backups purged successfully". Unknown commands → "command not found".
 - Verified end-to-end via Playwright (all steps pass, no console errors).
 
+## Sandbox View — Threat Injector (implemented — July 2025)
+- New left-rail tab "Sandbox View" (`LeftTabsRail.js`) alongside 3D Building + Network View. `App.activeTab='sandbox'` renders `SandboxView.js`.
+- Canvas is visually identical to Network View (shared `data/networkLayout.js` = extracted `buildLayout` + COLOR/ICON/constants + `getFloorHubNode`). NetworkView left untouched.
+- Two top toggle buttons: **Threat Injector** (functional) and **LLM Tester** (placeholder "coming soon" overlay for now).
+- Threat Injector flow: click any device node -> popover "Select attack type" (MITRE tactics from `data/mitreAttacks.js`) -> smooth transition -> "Select attack subtype" (numbered techniques w/ Txxxx IDs). One injection per device (re-open to change/remove). Injected chips get a coloured pulsing ring + technique-ID tag.
+- SABRE panel (`SandboxSabrePanel.js`, right side, translucent red, NO live telemetry): lists injected threats; **Trace possible path** button; **Reset**; after trace shows an explainable step-by-step breakdown (origin -> hops -> target) + "Show more details" modal (`sandbox-details-modal`) with full MITRE tactic/technique per step.
+- Path logic: injected devices ordered by floor ascending -> then each floor's Wi-Fi hub (`getFloorHubNode`, prefers wifi else switch) for every floor ABOVE the highest injected floor -> ends at **Core Switch (Floor 5)** as the objective. Red dashed path + rings reveal progressively (~650ms/step). MITRE tactic list per operator brief (Recon, Initial Access, Execution, Persistence, Priv Esc, Defense Impairment, Cred Access, Discovery, Lateral Movement, C2, Exfiltration).
+
 ## Backlog / Future
+- LLM Tester tab functionality (pending operator spec).

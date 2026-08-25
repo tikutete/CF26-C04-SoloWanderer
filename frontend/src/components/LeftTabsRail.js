@@ -1,9 +1,10 @@
 import React from 'react';
-import { Box, Network } from 'lucide-react';
+import { Box, Network, FlaskConical } from 'lucide-react';
 
 const TABS = [
   { id: 'scene', label: '3D Building', icon: Box },
   { id: 'network', label: 'Network View', icon: Network },
+  { id: 'sandbox', label: 'Sandbox View', icon: FlaskConical },
 ];
 
 export default function LeftTabsRail({ active, onSelect }) {

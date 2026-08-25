@@ -111,6 +111,23 @@ user_problem_statement: |
   Badge Reader should connect under the Floor-2 switch (they were rendering like stray links).
 
 frontend:
+  - task: "Hardware demo event bridge (backend /api/demo/*)"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            Added backend event bridge for external hardware (ESP32 RFID + Termux phone):
+            POST /api/demo/rfid {uid} -> assigns floor by scan order (1st=F1, 2nd=F2, 3rd+=floor null/ignored),
+            name=ARNAV if uid==BA:0D:A2:16 (case-insensitive) else VED; POST /api/demo/ssh {key};
+            POST /api/demo/openconfig; POST /api/demo/reset (clears); GET /api/demo/events (sorted by ts).
+            Stored in Mongo collection demo_events with uuid id + ts. TEST: reset, then 3 rfid scans
+            (verify floors 1,2,null and names), ssh, openconfig, GET events returns all in order, reset clears.
   - task: "Attack-path red glow in Network View driven by Terminal chain"
     implemented: true
     working: "NA"
@@ -177,6 +194,26 @@ frontend:
               6) In ON mode, "login exec_2" and "ssh back_serv_01" must be BLOCKED with an Auto-Defense message.
             Reset attack path button clears everything. Toggling Auto-Defense OFF should hide the panel and
             instead reveal the OFF-mode red compromised-device glow path.
+        - working: "NA"
+          agent: "main"
+          comment: |
+            EDIT (user-requested): (1) The reconstruction now also draws the dotted path from the ATTACK ORIGIN -
+            dotted rings on Lobby Kiosk (10.0.1.10) and Reception PC 2 (10.0.1.12) with dotted lines
+            Kiosk -> Reception PC 2 -> File Storage (F3) -> Dev Server 2 (F4) -> Backup Server (F5), all at reconStage>=2..4.
+            (2) "Show more details" now opens a SEPARATE MODAL WINDOW (data-testid "sabre-details-modal", title
+            "ATTACK STEP BREAKDOWN", close button data-testid "sabre-details-close") containing the 7 attack steps
+            with MITRE IDs and highlighted attack types - instead of expanding inline. Please retest the full ON flow
+            and confirm both edits.
+        - working: "NA"
+          agent: "main"
+          comment: |
+            EDIT 2 (user-requested): Analysis card "Potential reason" bullets changed to:
+            (1) "Lobby's Kiosk and Reception PC 2 share the same admin account." and
+            (2) "The memo on 10.0.3.20 stored the saved passwords of Executive PC 2."
+            Added new "Target and purpose" section below it: "The attack was aimed at the Backup Server of the
+            server floor, because of the presence of backup files referenced in the script."
+            In the "Show more details" modal (ATTACK STEP BREAKDOWN) the MITRE + Attack type text was made larger
+            and non-thin (13px / medium+bold) for readability.
 
 metadata:
   created_by: "main_agent"

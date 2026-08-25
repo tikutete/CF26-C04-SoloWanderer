@@ -1,11 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   X, Network, Monitor, Wifi, Router, Printer, Camera, ScanLine,
   HardDrive, Cloud, Server, Boxes, ShieldAlert,
 } from 'lucide-react';
 import { getFloorDevices } from '../data/floorDevices';
-import useDefenseEngine from '../hooks/useDefenseEngine';
+import useDefenseEngine, { HW_PATH } from '../hooks/useDefenseEngine';
 import SabreDefensePanel from './SabreDefensePanel';
+import TelemetryPanel from './TelemetryPanel';
+
+const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
 const COLOR = {
   computer: '#56d6e8', kiosk: '#8be7f2', badge: '#ffb454', camera: '#ff7a5c',
@@ -112,8 +115,37 @@ function Chip({ x, y, type, title, testid, big, compromised }) {
 export default function NetworkView({ onClose, compromisedIps = [], autoDefense = true, onResetPath, attackLog = [] }) {
   const { nodes, edges, labels, core, hubYByFloor, width, height } = useMemo(buildLayout, []);
 
-  const engine = useDefenseEngine(attackLog, autoDefense);
-  const { reconStage } = engine;
+  // Poll the backend event bridge (ESP32 RFID + Termux phone). Only events that
+  // arrive after entering the Network View drive reactions (existing ones are baselined).
+  const [demoEvents, setDemoEvents] = useState([]);
+  const seenRef = useRef(null);
+  useEffect(() => {
+    if (!BACKEND) return undefined;
+    let stop = false;
+    const poll = async () => {
+      try {
+        const r = await fetch(`${BACKEND}/api/demo/events`);
+        const data = await r.json();
+        if (stop) return;
+        const evs = data.events || [];
+        if (seenRef.current === null) { seenRef.current = new Set(evs.map((e) => e.id)); return; }
+        const fresh = evs.filter((e) => !seenRef.current.has(e.id));
+        if (fresh.length) { fresh.forEach((e) => seenRef.current.add(e.id)); setDemoEvents((prev) => [...prev, ...fresh]); }
+      } catch (e) { /* transient network error - keep polling */ }
+    };
+    poll();
+    const id = setInterval(poll, 1000);
+    return () => { stop = true; clearInterval(id); };
+  }, []);
+
+  const engine = useDefenseEngine(attackLog, demoEvents, autoDefense);
+  const { reconStage, litIps, hwRevealed } = engine;
+
+  const handleReset = useCallback(() => {
+    onResetPath?.();
+    setDemoEvents([]);
+    if (BACKEND) fetch(`${BACKEND}/api/demo/reset`, { method: 'POST' }).catch(() => {});
+  }, [onResetPath]);
 
   // Node lookup by IP (for the reconstructed-path overlay).
   const nodeByIp = useMemo(() => {
@@ -126,10 +158,17 @@ export default function NetworkView({ onClose, compromisedIps = [], autoDefense 
   const fs2 = nodeByIp['10.0.3.20'];   // File Storage Unit 2 (F3) - the memo share
   const dev = nodeByIp['10.0.4.18'];   // Dev Server 2 (F4)
   const backup = nodeByIp['10.0.5.16']; // Backup Server (F5)
+  const kiosk = nodeByIp['10.0.1.10'];  // Lobby Kiosk (F1) - attack origin
+  const recep = nodeByIp['10.0.1.12'];  // Reception PC 2 (F1) - first lateral hop
 
   const show = !autoDefense; // OFF: reveal the actual compromised path in red
   const comp = useMemo(() => new Set(show ? compromisedIps : []), [show, compromisedIps]);
   const hasPath = comp.size > 0;
+  // Chips light up for the OFF terminal path AND the hardware-demo lit devices (both modes).
+  const chipLit = useMemo(() => { const s = new Set(comp); litIps.forEach((ip) => s.add(ip)); return s; }, [comp, litIps]);
+
+  // Hardware-demo reconstruction: ordered node lookups.
+  const hwNodes = useMemo(() => HW_PATH.map((ip) => nodeByIp[ip]).filter(Boolean), [nodeByIp]);
 
   // Red backbone span: from the highest to the lowest compromised floor hub (grows upward as the attacker ascends).
   const spine = useMemo(() => {
@@ -166,9 +205,9 @@ export default function NetworkView({ onClose, compromisedIps = [], autoDefense 
             </span>
           )}
           <button
-            onClick={() => onResetPath?.()}
+            onClick={handleReset}
             data-testid="reset-attack-path-btn"
-            disabled={compromisedIps.length === 0}
+            disabled={compromisedIps.length === 0 && demoEvents.length === 0}
             className="rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300 transition-colors hover:bg-slate-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
             Reset attack path
@@ -224,6 +263,22 @@ export default function NetworkView({ onClose, compromisedIps = [], autoDefense 
             {autoDefense && reconStage >= 2 && fs2 && (
               <circle cx={fs2.x} cy={fs2.y} r={27} fill="none" stroke="#ff6b6b" strokeWidth={1.8} className="sabre-dash sabre-ring" data-testid="recon-ring-fs2" />
             )}
+            {/* Origin of the chain: Lobby Kiosk -> Reception PC 2 (F1) -> File Storage (F3) */}
+            {autoDefense && reconStage >= 2 && kiosk && (
+              <circle cx={kiosk.x} cy={kiosk.y} r={27} fill="none" stroke="#ff6b6b" strokeWidth={1.8} className="sabre-dash sabre-ring" data-testid="recon-ring-kiosk" />
+            )}
+            {autoDefense && reconStage >= 2 && recep && (
+              <circle cx={recep.x} cy={recep.y} r={27} fill="none" stroke="#ff6b6b" strokeWidth={1.8} className="sabre-dash sabre-ring" data-testid="recon-ring-recep" />
+            )}
+            {autoDefense && reconStage >= 2 && kiosk && recep && (
+              <line x1={kiosk.x} y1={kiosk.y} x2={recep.x} y2={recep.y} stroke="#ff3b3b" strokeWidth={2} className="sabre-dash" style={{ filter: 'drop-shadow(0 0 4px rgba(255,59,59,0.9))' }} data-testid="recon-line-origin" />
+            )}
+            {autoDefense && reconStage >= 2 && recep && fs2 && (
+              <line x1={recep.x} y1={recep.y} x2={fs2.x} y2={fs2.y} stroke="#ff3b3b" strokeWidth={2} className="sabre-dash" style={{ filter: 'drop-shadow(0 0 4px rgba(255,59,59,0.9))' }} data-testid="recon-line-recep-fs" />
+            )}
+            {autoDefense && reconStage >= 2 && recep && fs1 && (
+              <line x1={recep.x} y1={recep.y} x2={fs1.x} y2={fs1.y} stroke="#ff5a5a" strokeWidth={1.6} strokeOpacity={0.7} className="sabre-dash" />
+            )}
             {autoDefense && reconStage >= 3 && fs1 && dev && (
               <line x1={fs1.x} y1={fs1.y} x2={dev.x} y2={dev.y} stroke="#ff5a5a" strokeWidth={1.6} strokeOpacity={0.75} className="sabre-dash" />
             )}
@@ -239,17 +294,37 @@ export default function NetworkView({ onClose, compromisedIps = [], autoDefense 
             {autoDefense && reconStage >= 4 && backup && (
               <circle cx={backup.x} cy={backup.y} r={27} fill="none" stroke="#ff3b3b" strokeWidth={2} className="sabre-dash sabre-ring" data-testid="recon-ring-backup" />
             )}
+
+            {/* Hardware demo (Auto-Defense ON): staged lateral-path trace across revealed nodes */}
+            {autoDefense && hwRevealed > 1 && hwNodes.slice(0, hwRevealed).map((n, i) => {
+              if (i === 0) return null;
+              const p = hwNodes[i - 1];
+              return (
+                <line
+                  key={`hw-line-${i}`}
+                  x1={p.x} y1={p.y} x2={n.x} y2={n.y}
+                  stroke="#ff3b3b" strokeWidth={2} className="sabre-dash"
+                  style={{ filter: 'drop-shadow(0 0 4px rgba(255,59,59,0.9))' }}
+                  data-testid={`hw-recon-line-${i}`}
+                />
+              );
+            })}
+            {autoDefense && hwNodes.slice(0, hwRevealed).map((n, i) => (
+              <circle key={`hw-ring-${i}`} cx={n.x} cy={n.y} r={27} fill="none" stroke="#ff5a5a" strokeWidth={1.8} className="sabre-dash sabre-ring" data-testid={`hw-recon-ring-${i}`} />
+            ))}
           </svg>
 
-          {core && <Chip x={core.x} y={core.y} type="coreswitch" title="Core Switch (Floor 5)" testid="net-node-core" big compromised={comp.has('10.0.5.1')} />}
+          {core && <Chip x={core.x} y={core.y} type="coreswitch" title="Core Switch (Floor 5)" testid="net-node-core" big compromised={chipLit.has('10.0.5.1')} />}
           {nodes.map((d) => (
-            <Chip key={d.id} x={d.x} y={d.y} type={d.type} title={`${d.name}\n${d.ip}\n${d.relationship}`} testid={`net-node-${d.id}`} compromised={comp.has(d.ip)} />
+            <Chip key={d.id} x={d.x} y={d.y} type={d.type} title={`${d.name}\n${d.ip}\n${d.relationship}`} testid={`net-node-${d.id}`} compromised={chipLit.has(d.ip)} />
           ))}
         </div>
       </div>
 
-      {/* Auto-Defense ON: live SABRE defense panel on the right */}
-      {autoDefense && <SabreDefensePanel {...engine} />}
+      {/* Auto-Defense ON: live SABRE defense panel · OFF: live telemetry panel */}
+      {autoDefense
+        ? <SabreDefensePanel {...engine} />
+        : <TelemetryPanel telemetry={engine.telemetry} />}
     </div>
   );
 }
